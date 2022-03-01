@@ -1,18 +1,36 @@
 <?php
-$path = __DIR__;
-$j = file_get_contents($path.'/iptv.json');
-$data = json_decode($j, true);
+include __DIR__.'/iptv.php';
+
+//echo $path.PHP_EOL;
+//print_r($data);
+//die;
+
+
+
+if($_POST){
+    $ip = $_GET['ip'];
+    $port = $_GET['port'];
+    $id = $ip . '_' . $port;
+    $data[$id]['title'] = $_POST['title'];
+    $data[$id]['tvg-name'] = $_POST['tvg-name'];
+    $data[$id]['group-title'] = $_POST['group-title'];
+    $data[$id]['state'] = $_POST['state'];
+    $data[$id]['sort'] = $_POST['sort'];
+    $j = json_encode($data);
+    echo $j;
+    file_put_contents($path.'/iptv.json', $j);
+    exit();
+}
+
+
+
+
 $sort = [];
-
-
-
 foreach($data as $key => $value){
-
     $sort[$key] = $value['sort'];
 }
+
 asort($sort);
-//print_r($sort);
-//print_r($data);
 ?><!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -35,10 +53,9 @@ asort($sort);
 	.m1{
             float: left;
             width: 220px;
-            height: 410px;
+            height: 360px;
         }
 	.m2{
-
             margin-left: 10px;
             margin-bottom: 12px;
             height: 160px;
@@ -46,76 +63,50 @@ asort($sort);
     </style>
     <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
     <script type="application/javascript">
-function update(ip, port){
-	console.log(ip);
-	console.log(port);
-    id = '#n_'+ip+'_'+port+'_title';
-	console.log(id);
-	console.log($(id).val());
-
-
-
-
-
-
-
-
+function update(id, ip, port){
+    data = {
+        "title": $('#'+id+'_title').val(),
+	"tvg-name": $('#'+id+'_tvg-name').val(),
+	"group-title": $('#'+id+'_group-title').val(),
+	"sort": $('#'+id+'_sort').val(),
+	"state": $('#'+id+'_state').val()
+    }
+    $.post('./index.php?ip='+ip+'&port='+port, data);
 }
-/*
-        function update(str) {
-            let arr = str.split('_');
-            let ip = arr[0];
-            let port = arr[1];
-            let id = arr[2];
 
-            //console.log();
-            //return;
-            let data = {
-                //'ip': ip,
-                //'port': port,
-                'title': $('#title_'+id).val(),
-                'tvg-name': $('#channelName_'+id).val(),
-                'tvg-code': $('#channelCode_'+id).val(),
-                'group-title': $('#class_'+id).val(),
-                'sort': $('#sort_'+id).val(),
-                'tvg-id': $('#epgId_'+id).val(),
-                //'epgName': $('#epgName_'+id).val(),
-                'state': $("input[name='state_"+id+"']:checked").val()
-            };
-            //console.log(data);
-            $.post('/iptv-show?ip='+ip+'&port='+port, data, function (result) {
-                console.log(result);
-            });
-        }
- */
     </script>
 </head>
 <body>
-<div><?php foreach($sort as $key=>$value){ 
+<div><?php 
+$count = 0;
+foreach($sort as $key=>$value){ 
 $datum = $data[$key];
 $img = '/img/' . $datum['ip'] . '_' . $datum['port'] . '.jpg';
 if(!is_file($path . $img)){
     continue;
 }
-$id = 'n_'.$datum['ip'].'_'.$datum['port'];
+$id = 'n'.$count;
 ?>
 
     <div class="m1">
         <div class="m2">
-            <a target="_blank" href="<?php echo $img;?>">
-                <img style="width: 200px;" src="<?php echo $img;?>"/>
+            <a target="_blank" href=".<?php echo $img;?>">
+                <img style="width: 200px;" src=".<?php echo $img;?>"/>
 	    </a>
         </div>
 	<p>
             <a href="http://192.168.6.1:5002/udp/<?php echo $datum['ip'] . ':' . $datum['port']; ?>">
-                    <?php echo $datum['ip'] . ':' . $datum['port'] ?></a>
+	    <?php echo $datum['ip'] . ':' . $datum['port'] ?></a>[<?php echo $datum['videoHeight']?>]
         </p>
 	<p><input id="<?php echo $id;?>_title" type="text" value="<?php echo $datum["title"]; ?>"/></p>
 	<p><input id="<?php echo $id?>_tvg-name" type="text" value="<?php echo $datum['tvg-name'];?>"/></p>
+	<p><input id="<?php echo $id?>_group-title" type="text" value="<?php echo $datum['group-title'];?>"/></p>
 	<p><input id="<?php echo $id?>_sort" type="text" value="<?php echo $datum['sort'];?>" /></p>
 	<p><input id="<?php echo $id?>_state" type="text" value="<?php echo $datum['state'];?>" /></p>
-	<p style="padding-right: 26px;" align="right"><a href="javascript:void(0);" onclick="update('<?php echo $datum['ip'];?>', <?php echo $datum['port'];?>)" >保存</a></p>
-    </div><?php } ?>
+	<p style="padding-right: 26px;" align="right"><a href="javascript:void(0);" onclick="update(<?php echo "'{$id}', '{$datum['ip']}', {$datum['port']}";?>)" >保存</a></p>
+    </div><?php 
+$count++;
+} ?>
 
 </div>
 </body></html>
