@@ -9,7 +9,7 @@ iptv.php:用于更新电视节目单,扫描电视频道.cli下执行.
 list.php:整理后的电视频道清单,用于kodi下的iptv插件.通过浏览器访问.  
 
 #### 1.配置iptv.php  
-$getway 修改为你路由网关地址  
+修改文件iptv.php 变量"$getway"为你路由网关地址  
 
 #### 2.扫描频道  
 ```
