@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <title>tj-unicom-iptv</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            margin: 10px;
+        }
+
+        p {
+            margin: 0;
+            height: 24px;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        select {
+            width: 192px;
+        }
+
+        #header p {
+            margin-bottom: 10px;
+        }
+    </style>
+    <script type="application/javascript" src="/node_modules/jquery/dist/jquery.min.js"></script>
+    <script type="application/javascript">
+        let udpxy, state, videoHeight, xmlDoc;
+        udpxy = 'http://192.168.6.1:5002/udp/';
+        $(function () {
+            $('#udpxy').val(localStorage.getItem('udpxy') === null ? udpxy : localStorage.getItem('udpxy'));
+            $.get('epg.xml?t=' + Date.now(), function (xml) {
+                xmlDoc = xml;
+                reload();
+            });
+        });
+
+        function reload() {
+            udpxy = $('#udpxy').val();
+            localStorage.setItem('udpxy', udpxy);
+            state = [];
+            videoHeight = [];
+            $('input[name="c_state"]:checked').each(function () {
+                state.push($(this).val())
+            });
+            $('input[name="c_height"]:checked').each(function () {
+                videoHeight.push($(this).val())
+            });
+            $('#main').empty();
+            let now = Date.now();
+            let d = new Date(now);
+            let ds = d.getFullYear().toString() +
+                (d.getMonth() + 1).toString().padStart(2, '0') +
+                d.getDate().toString().padStart(2, '0') +
+                d.getHours().toString().padStart(2, '0') +
+                d.getMinutes().toString().padStart(2, '0') +
+                d.getSeconds().toString().padStart(2, '0');
+            $.getJSON("iptv.json?t=" + now, function (data) {
+                let tmp = [];
+                $.each(data, function (key, value) {
+                    let obj = {};
+                    obj['id'] = key;
+                    obj['sort'] = value['sort'];
+                    obj['videoHeight'] = value['videoHeight'];
+                    obj['state'] = value['state'];
+                    tmp.push(obj);
+                });
+                tmp.sort(function (a, b) {
+                    return a['sort'] - b['sort'];
+                })
+                /*
+                tmp.sort(function (a, b) {
+                    return b.videoHeight - a.videoHeight;
+                })
+                tmp.sort(function (a, b) {
+                    return b.state - a.state;
+                })
+                */
+                $.each(tmp, function (index, value) {
+                    let id = value['id'];
+                    if ($.inArray(data[id]['state'], state) === -1) {
+                        return;
+                    }
+                    if ($.inArray(data[id]['videoHeight'].toString(), videoHeight) === -1) {
+                        return;
+                    }
+                    let s, h;
+                    if (data[id]['state'] === '1') {
+                        s = ' checked="checked"';
+                        h = '';
+                    } else {
+                        s = '';
+                        h = ' checked="checked"';
+                    }
+                    let str = '<div style="margin:10px;float: left; width: 200px; height: 410px;"><form id="f' + index + '">';
+                    str += '<div style="height: 166px;">';
+                    str += '<a target="_blank" href="img/' + id + '.jpg">';
+                    str += '<img alt="" title="' + (new Date(data[id]['imgTime'] * 1000)).toLocaleString() + '" style="width:    200px;" src="img/' + id + 's.jpg?s=' + now + '"/></a>';
+                    let select = '<select style="width:200px;">';
+                    if (data[id]['tvg-name'] !== '') {
+                        $(xmlDoc).find("programme[channel=" + data[id]['tvg-name'] + "]").each(function () {
+                            let start = $(this).attr('start').substring(0, 14);
+                            let stop = $(this).attr('stop').substring(0, 14);
+                            if (ds.substring(0, 8) === start.substring(0, 8)) {
+                                select += '<option';
+                                if ((~~ds.substring(8, 12) >= ~~start.substring(8, 12)) && (~~ds.substring(8, 12) < ~~stop.substring(8, 12))) {
+                                    select += ' selected';
+                                }
+                                select += '>' + start.substring(8, 10) + ':' + start.substring(10, 12);
+                                select += ' ' + $(this).find('title').eq(0).text() + '</option>';
+                            }
+                        });
+                    }
+                    select += '</select>';
+                    str += '</div>';
+                    str += '<p><a href="' + udpxy + data[id]['ip'] + ':' + data[id]['port'] + '">';
+                    str += data[id]['ip'] + ':' + data[id]['port'] + '</a> [' + data[id]['videoHeight'] + '] </p>';
+                    str += '<p><input style="width:192px;" name="title" type="text" value="' + data[id]['title'] + '" /></p>';
+                    str += '<p><input style="width:192px;" name="tvg-name" type="text" value="' + data[id]['tvg-name'] + '" /></p>';
+                    str += '<p>' + select + '</p>';
+                    str += '<p><input style="width:192px;" name="group-title" type="text" value="' + data[id]['group-title'] + '" /></p>';
+                    str += '<p><input style="width:192px;" name="sort" type="text" value="' + data[id]['sort'] + '" /></p>';
+                    str += '<p><input id="s_' + index + '" name="state" type="radio" value="1"' + s + ' /><label for="s_' + index + '">显示</label>';
+                    str += '<input id ="h_' + index + '" name="state" type="radio" value="0"' + h + ' /><label for="h_' + index + '">隐藏</label></p>';
+                    str += '<p style="padding-right: 26px;text-align: right;">';
+                    str += '<input name="ip" type="hidden" value="' + data[id]['ip'] + '">';
+                    str += '<input name="port" type="hidden" value="' + data[id]['port'] + '">';
+                    str += '<a href="javascript:void(0);" onclick="update(' + index + ', \'' + id + '\')" >保存</a></p>';
+                    str += '</form></div>';
+                    $('#main').append(str);
+                });
+            });
+        }
+
+        function update(index, id) {
+            let formData = new FormData(document.getElementById("f" + index));
+            let request = new XMLHttpRequest();
+            request.open('POST', 'iptv.php?id=' + id, false);
+            request.send(formData);
+            reload();
+        }
+    </script>
+</head>
+<body>
+<h1>天津联通IPTV频道整理</h1>
+<h4>
+    该页为GitHub项目的演示:<br/>
+    <a href="https://github.com/gabacai/tj-unicom-iptv">https://github.com/gabacai/tj-unicom-iptv</a><br/>
+    EPG文件来自:<br/>
+    <a href="https://epg.112114.xyz">https://epg.112114.xyz</a><br/>
+</h4>
+<div id="header">
+    <p>
+        <label for="udpxy">udpxy地址:</label>
+        <input id="udpxy" type="text" value="http://192.168.6.1:5002/udp/" size="30"/>
+    </p>
+    <p>
+        显示:
+        <input id="c_state1" name="c_state" type="checkbox" checked="checked" value="1"/>
+        <label for="c_state1">state=1</label>
+        <input id="c_state0" name="c_state" type="checkbox" value="0"/>
+        <label for="c_state0">state=0</label>
+        <input id="c_height2160" name="c_height" type="checkbox" checked="checked" value="2160"/>
+        <label for="c_height2160">height=2160</label>
+        <input id="c_height1080" name="c_height" type="checkbox" checked="checked" value="1080"/>
+        <label for="c_height1080">height=1080</label>
+        <input id="c_height576" name="c_height" type="checkbox" value="576"/>
+        <label for="c_height576">height=576</label>
+        <input id="c_height0" name="c_height" type="checkbox" value="0"/>
+        <label for="c_height0">height=0</label>
+    </p>
+    <p>
+        <a href="javascript:void(0);" onclick="reload();">刷新</a>
+    </p>
+</div>
+<div id="main"></div>
+</body>
+</html>

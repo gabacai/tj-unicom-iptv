@@ -1,0 +1,11 @@
+{
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "ext-imagick": "^3.7",
+        "ext-zlib": "*",
+        "ext-simplexml": "*",
+        "php-ffmpeg/php-ffmpeg": "^1.1"
+    }
+}
+
