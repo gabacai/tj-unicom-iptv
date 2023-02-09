@@ -40,5 +40,5 @@ php epg.php
 电视节目指南地址:http://server:8088/epg.xml  
 
 ### 3. 演示
-如果你觉得上面操作难以理解,可以使我整理过的频道  
+如果你觉得上面操作难以理解,可以使用我整理过的频道.  
 <https://gabacai.github.io/iptv/>
